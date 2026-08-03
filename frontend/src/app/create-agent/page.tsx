@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export default function CreateAgent() {
-  const [step, setStep] = useState<"name-agent" | "name-user" | "done">("name-agent");
+  const [step, setStep] = useState<"name-agent" | "name-user" | "chat">("name-agent");
   const [agentName, setAgentName] = useState("");
   const [userName, setUserName] = useState("");
-  const [reply, setReply] = useState("");
+  const [messages, setMessages] = useState<{ role: "agent" | "user"; text: string }[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const handleAgentName = () => {
     if (agentName.trim() === "") return;
@@ -16,14 +23,65 @@ export default function CreateAgent() {
 
   const handleUserName = () => {
     if (userName.trim() === "") return;
-    setReply(`Hello ${userName.trim()}, how can I help you?`);
     localStorage.setItem("nova_user_name", userName.trim());
-    setStep("done");
+
+    setMessages([
+      {
+        role: "agent",
+        text: `Hello ${userName.trim()}, how can I help you?`,
+      },
+    ]);
+    setStep("chat");
+  };
+
+  const handleSend = async () => {
+    if (input.trim() === "" || loading) return;
+
+    const userMessage = input.trim();
+    setMessages((prev) => [...prev, { role: "user", text: userMessage }]);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const res = await fetch("http://localhost:8000/agent/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          agent_name: agentName,
+          user_name: userName,
+        }),
+      });
+
+      const data = await res.json();
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "agent",
+          text: data.reply,
+        },
+      ]);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "agent",
+          text: "Sorry, I could not reach the server. Is the backend running?",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-black text-white px-4">
-      <h1 className="text-4xl font-bold mb-3">Create Your First Agent</h1>
+      {step !== "chat" && (
+        <h1 className="text-4xl font-bold mb-3">Create Your First Agent</h1>
+      )}
 
       {step === "name-agent" && (
         <>
@@ -74,21 +132,59 @@ export default function CreateAgent() {
         </>
       )}
 
-      {step === "done" && (
-        <div className="flex flex-col items-center text-center max-w-md">
-          {/* Eenvoudige holografische orb */}
-          <div className="relative mb-8">
-            <div className="w-28 h-28 rounded-full bg-green-500/20 border border-green-400/50 animate-pulse"></div>
-            <div className="absolute inset-0 w-28 h-28 rounded-full bg-green-400/10 blur-xl"></div>
+      {step === "chat" && (
+        <div className="w-full max-w-lg flex flex-col h-[80vh]">
+          <div className="flex justify-center mb-6">
+            <div className="relative">
+              <div className="w-20 h-20 rounded-full bg-green-500/20 border border-green-400/50 animate-pulse"></div>
+              <div className="absolute inset-0 w-20 h-20 rounded-full bg-green-400/10 blur-xl"></div>
+            </div>
           </div>
 
-          <div className="mb-6 p-6 border border-green-500/30 rounded-xl bg-green-500/5">
-            <p className="text-xl text-green-400">{reply}</p>
-          </div>
-
-          <p className="text-sm text-gray-500">
-            Level 0 completed – Your first agent is alive
+          <p className="text-center text-green-400 mb-4 text-sm">
+            {agentName} is online
           </p>
+
+          <div className="flex-1 overflow-y-auto space-y-4 mb-4 px-2">
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                className={`flex ${
+                  msg.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                <div
+                  className={`max-w-[80%] px-4 py-3 rounded-xl text-sm ${
+                    msg.role === "user"
+                      ? "bg-green-600 text-black"
+                      : "bg-zinc-900 border border-green-500/30 text-green-400"
+                  }`}
+                >
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+            <div ref={bottomRef} />
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder="Type a message..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              disabled={loading}
+              className="flex-1 px-4 py-3 rounded-lg bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-green-500 disabled:opacity-50"
+            />
+            <button
+              onClick={handleSend}
+              disabled={loading}
+              className="px-5 py-3 bg-green-600 hover:bg-green-500 text-black font-medium rounded-lg transition-colors disabled:opacity-50"
+            >
+              {loading ? "..." : "Send"}
+            </button>
+          </div>
         </div>
       )}
     </main>
