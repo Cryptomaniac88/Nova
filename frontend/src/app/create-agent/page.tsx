@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 
 export default function CreateAgent() {
   const [step, setStep] = useState<"name-agent" | "name-user" | "chat">("name-agent");
@@ -10,6 +11,37 @@ export default function CreateAgent() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Laad opgeslagen data bij start
+  useEffect(() => {
+    const savedAgent = localStorage.getItem("nova_first_agent");
+    const savedUser = localStorage.getItem("nova_user_name");
+    const savedMessages = localStorage.getItem("nova_chat_messages");
+
+    if (savedAgent && savedUser) {
+      setAgentName(savedAgent);
+      setUserName(savedUser);
+      setStep("chat");
+
+      if (savedMessages) {
+        setMessages(JSON.parse(savedMessages));
+      } else {
+        setMessages([
+          {
+            role: "agent",
+            text: `Hello ${savedUser}, how can I help you?`,
+          },
+        ]);
+      }
+    }
+  }, []);
+
+  // Sla berichten op bij elke verandering
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem("nova_chat_messages", JSON.stringify(messages));
+    }
+  }, [messages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -25,12 +57,12 @@ export default function CreateAgent() {
     if (userName.trim() === "") return;
     localStorage.setItem("nova_user_name", userName.trim());
 
-    setMessages([
-      {
-        role: "agent",
-        text: `Hello ${userName.trim()}, how can I help you?`,
-      },
-    ]);
+    const firstMessage = {
+      role: "agent" as const,
+      text: `Hello ${userName.trim()}, how can I help you?`,
+    };
+
+    setMessages([firstMessage]);
     setStep("chat");
   };
 
@@ -141,9 +173,17 @@ export default function CreateAgent() {
             </div>
           </div>
 
-          <p className="text-center text-green-400 mb-4 text-sm">
-            {agentName} is online
-          </p>
+          <div className="flex justify-between items-center mb-4 px-2">
+            <p className="text-green-400 text-sm">
+              {agentName} is online
+            </p>
+            <Link
+              href="/control-room"
+              className="text-sm text-gray-400 hover:text-green-400 transition-colors"
+            >
+              Control Room →
+            </Link>
+          </div>
 
           <div className="flex-1 overflow-y-auto space-y-4 mb-4 px-2">
             {messages.map((msg, index) => (
