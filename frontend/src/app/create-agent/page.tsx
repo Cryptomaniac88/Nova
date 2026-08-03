@@ -43,7 +43,6 @@ export default function CreateAgent() {
     if (messages.length > 0) {
       localStorage.setItem("nova_chat_messages", JSON.stringify(messages));
 
-      // Level 1 ontgrendelen na 5 berichten
       if (messages.length >= 5 && level < 1) {
         setLevel(1);
         localStorage.setItem("nova_level", "1");
@@ -174,16 +173,54 @@ export default function CreateAgent() {
 
       {step === "chat" && (
         <div className="w-full max-w-lg flex flex-col h-[80vh]">
-          {/* Verbeterde hologram met ogen */}
-          <div className="flex justify-center mb-4">
-            <div className="relative">
-              <div className="w-24 h-24 rounded-full bg-green-500/20 border border-green-400/40 animate-pulse flex items-center justify-center gap-4">
+          {/* Hologram + Neuron network processing */}
+          <div className="flex flex-col items-center mb-4">
+            <div className="relative w-32 h-32 flex items-center justify-center">
+              
+              {/* Buitenste orb */}
+              <div
+                className={`absolute w-24 h-24 rounded-full border flex items-center justify-center gap-4 transition-all duration-300 z-10 ${
+                  loading
+                    ? "bg-green-500/20 border-green-300 scale-105"
+                    : "bg-green-500/20 border-green-400/40 animate-pulse"
+                }`}
+              >
                 {/* Ogen */}
                 <div className="w-3 h-3 rounded-full bg-green-400 shadow-[0_0_8px_#4ade80]"></div>
                 <div className="w-3 h-3 rounded-full bg-green-400 shadow-[0_0_8px_#4ade80]"></div>
               </div>
-              <div className="absolute inset-0 w-24 h-24 rounded-full bg-green-400/10 blur-xl"></div>
+
+              {/* Neuron network (alleen zichtbaar tijdens thinking) */}
+              {loading && (
+                <>
+                  {/* Verbindingslijnen */}
+                  <div className="absolute w-full h-full">
+                    <div className="absolute top-4 left-6 w-8 h-px bg-green-400/40 rotate-45 origin-left"></div>
+                    <div className="absolute top-4 right-6 w-8 h-px bg-green-400/40 -rotate-45 origin-right"></div>
+                    <div className="absolute bottom-6 left-8 w-10 h-px bg-green-400/30 rotate-12"></div>
+                    <div className="absolute bottom-6 right-8 w-10 h-px bg-green-400/30 -rotate-12"></div>
+                    <div className="absolute top-1/2 left-2 w-6 h-px bg-green-400/50"></div>
+                    <div className="absolute top-1/2 right-2 w-6 h-px bg-green-400/50"></div>
+                  </div>
+
+                  {/* Neuronen (pulserende bolletjes) */}
+                  <div className="absolute top-2 left-8 w-2 h-2 rounded-full bg-green-300 animate-ping"></div>
+                  <div className="absolute top-2 right-8 w-2 h-2 rounded-full bg-green-300 animate-ping" style={{ animationDelay: "0.2s" }}></div>
+                  <div className="absolute bottom-4 left-6 w-2.5 h-2.5 rounded-full bg-green-400 animate-ping" style={{ animationDelay: "0.4s" }}></div>
+                  <div className="absolute bottom-4 right-6 w-2.5 h-2.5 rounded-full bg-green-400 animate-ping" style={{ animationDelay: "0.6s" }}></div>
+                  <div className="absolute top-1/2 left-1 w-2 h-2 rounded-full bg-green-200 animate-ping" style={{ animationDelay: "0.3s" }}></div>
+                  <div className="absolute top-1/2 right-1 w-2 h-2 rounded-full bg-green-200 animate-ping" style={{ animationDelay: "0.5s" }}></div>
+                </>
+              )}
+
+              <div className="absolute inset-0 rounded-full bg-green-400/10 blur-xl"></div>
             </div>
+
+            {loading && (
+              <p className="mt-2 text-xs text-green-400/80 animate-pulse">
+                Neural processing...
+              </p>
+            )}
           </div>
 
           <div className="flex justify-between items-center mb-4 px-2">

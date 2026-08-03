@@ -43,7 +43,7 @@ Always answer in the same language the user is using.
 Keep answers relatively short unless the user asks for more detail."""
 
     try:
-        async with httpx.AsyncClient(timeout=90.0) as client:
+        async with httpx.AsyncClient(timeout=180.0) as client:
             response = await client.post(
                 "http://127.0.0.1:1234/v1/chat/completions",
                 json={
