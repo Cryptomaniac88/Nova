@@ -10,13 +10,16 @@ export default function CreateAgent() {
   const [messages, setMessages] = useState<{ role: "agent" | "user"; text: string }[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [level, setLevel] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Laad opgeslagen data bij start
   useEffect(() => {
     const savedAgent = localStorage.getItem("nova_first_agent");
     const savedUser = localStorage.getItem("nova_user_name");
     const savedMessages = localStorage.getItem("nova_chat_messages");
+    const savedLevel = localStorage.getItem("nova_level");
+
+    if (savedLevel) setLevel(Number(savedLevel));
 
     if (savedAgent && savedUser) {
       setAgentName(savedAgent);
@@ -36,10 +39,15 @@ export default function CreateAgent() {
     }
   }, []);
 
-  // Sla berichten op bij elke verandering
   useEffect(() => {
     if (messages.length > 0) {
       localStorage.setItem("nova_chat_messages", JSON.stringify(messages));
+
+      // Level 1 ontgrendelen na 5 berichten
+      if (messages.length >= 5 && level < 1) {
+        setLevel(1);
+        localStorage.setItem("nova_level", "1");
+      }
     }
   }, [messages]);
 
@@ -166,17 +174,23 @@ export default function CreateAgent() {
 
       {step === "chat" && (
         <div className="w-full max-w-lg flex flex-col h-[80vh]">
-          <div className="flex justify-center mb-6">
+          {/* Verbeterde hologram met ogen */}
+          <div className="flex justify-center mb-4">
             <div className="relative">
-              <div className="w-20 h-20 rounded-full bg-green-500/20 border border-green-400/50 animate-pulse"></div>
-              <div className="absolute inset-0 w-20 h-20 rounded-full bg-green-400/10 blur-xl"></div>
+              <div className="w-24 h-24 rounded-full bg-green-500/20 border border-green-400/40 animate-pulse flex items-center justify-center gap-4">
+                {/* Ogen */}
+                <div className="w-3 h-3 rounded-full bg-green-400 shadow-[0_0_8px_#4ade80]"></div>
+                <div className="w-3 h-3 rounded-full bg-green-400 shadow-[0_0_8px_#4ade80]"></div>
+              </div>
+              <div className="absolute inset-0 w-24 h-24 rounded-full bg-green-400/10 blur-xl"></div>
             </div>
           </div>
 
           <div className="flex justify-between items-center mb-4 px-2">
-            <p className="text-green-400 text-sm">
-              {agentName} is online
-            </p>
+            <div>
+              <p className="text-green-400 text-sm">{agentName} is online</p>
+              <p className="text-xs text-gray-500">Level {level}</p>
+            </div>
             <Link
               href="/control-room"
               className="text-sm text-gray-400 hover:text-green-400 transition-colors"
@@ -184,6 +198,12 @@ export default function CreateAgent() {
               Control Room →
             </Link>
           </div>
+
+          {level >= 1 && (
+            <div className="mb-3 text-center text-xs text-green-500/80">
+              Level 1 unlocked
+            </div>
+          )}
 
           <div className="flex-1 overflow-y-auto space-y-4 mb-4 px-2">
             {messages.map((msg, index) => (
