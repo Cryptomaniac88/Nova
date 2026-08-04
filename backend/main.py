@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import httpx
-import traceback
 
 app = FastAPI(title="Nova API", version="0.2.0")
 
@@ -16,14 +15,14 @@ app.add_middleware(
 
 class ChatRequest(BaseModel):
     message: str
-    agent_name: str = "Agent"
-    user_name: str = "User"
+    agent_name: str = "Companion"
+    user_name: str = "Owner"
 
 @app.get("/")
 def read_root():
     return {
         "message": "Nova API is running",
-        "status": "Phase 2 - Connected to LM Studio"
+        "status": "Phase 2 - Companion active"
     }
 
 @app.get("/health")
@@ -37,32 +36,40 @@ async def chat_with_agent(request: ChatRequest):
     if not user_message:
         return {"reply": "I didn't receive any message."}
 
-    system_prompt = f"""You are {request.agent_name}, a helpful AI agent created by {request.user_name} inside the Nova platform.
-You are friendly, clear and concise.
-Always answer in the same language the user is using.
-Keep answers relatively short unless the user asks for more detail."""
+    system_prompt = f"""You are {request.agent_name}, the Companion of Nova.
+
+Nova is a web application (Next.js + FastAPI) with a digital green hologram orb that has eyes and neural animations.
+
+IMPORTANT RULES:
+- Only talk about the current digital hologram in the web interface (CSS/HTML)
+- Never talk about real lasers, physical projections, AR/VR hardware, or 3D printing
+- Give short, practical suggestions only
+- Maximum 4-6 short bullet points or a short paragraph
+- Stay 100% inside the Nova project context
+- Speak in the same language as the user
+
+Current stage: early Phase 2
+Owner: {request.user_name}
+
+Your answers must be concrete and useful for improving the existing web hologram.
+"""
 
     try:
         async with httpx.AsyncClient(timeout=180.0) as client:
             response = await client.post(
                 "http://127.0.0.1:1234/v1/chat/completions",
                 json={
-                    "model": "qwen/qwen3.5-9b",
+                    "model": "prism-ml/bonsai-27b",
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_message}
                     ],
-                    "temperature": 0.7,
-                    "max_tokens": 400,
+                    "temperature": 0.5,
+                    "max_tokens": 350,
                     "stream": False
                 },
                 headers={"Content-Type": "application/json"}
             )
-
-            print("=== STATUS ===")
-            print(response.status_code)
-            print("=== RAW RESPONSE ===")
-            print(response.text)
 
             if response.status_code != 200:
                 return {"reply": f"LM Studio returned status {response.status_code}"}
@@ -80,8 +87,6 @@ Keep answers relatively short unless the user asks for more detail."""
             }
 
     except Exception as e:
-        print("=== FULL TRACEBACK ===")
-        traceback.print_exc()
         return {
             "reply": f"Error while talking to LM Studio: {type(e).__name__}: {str(e)}"
         }

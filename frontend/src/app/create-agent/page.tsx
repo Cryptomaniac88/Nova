@@ -18,6 +18,7 @@ export default function CreateAgent() {
     const savedUser = localStorage.getItem("nova_user_name");
     const savedMessages = localStorage.getItem("nova_chat_messages");
     const savedLevel = localStorage.getItem("nova_level");
+    const evolutionShown = localStorage.getItem("nova_evolution_1");
 
     if (savedLevel) setLevel(Number(savedLevel));
 
@@ -26,16 +27,28 @@ export default function CreateAgent() {
       setUserName(savedUser);
       setStep("chat");
 
+      let initialMessages: { role: "agent" | "user"; text: string }[] = [];
+
       if (savedMessages) {
-        setMessages(JSON.parse(savedMessages));
+        initialMessages = JSON.parse(savedMessages);
       } else {
-        setMessages([
+        initialMessages = [
           {
             role: "agent",
-            text: `Hello ${savedUser}, how can I help you?`,
+            text: `Hello ${savedUser}, I am your Companion. How can I help you?`,
           },
-        ]);
+        ];
       }
+
+      if (!evolutionShown) {
+        initialMessages.push({
+          role: "agent",
+          text: `I just evolved.\n\nI can now give you concrete suggestions to improve Nova.\n\nTry asking me:\n"How can I improve the hologram?"\nor\n"What should we build next?"`,
+        });
+        localStorage.setItem("nova_evolution_1", "true");
+      }
+
+      setMessages(initialMessages);
     }
   }, []);
 
@@ -66,7 +79,7 @@ export default function CreateAgent() {
 
     const firstMessage = {
       role: "agent" as const,
-      text: `Hello ${userName.trim()}, how can I help you?`,
+      text: `Hello ${userName.trim()}, I am your Companion. How can I help you?`,
     };
 
     setMessages([firstMessage]);
@@ -84,32 +97,20 @@ export default function CreateAgent() {
     try {
       const res = await fetch("http://localhost:8000/agent/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMessage,
-          agent_name: agentName,
+          agent_name: agentName || "Companion",
           user_name: userName,
         }),
       });
 
       const data = await res.json();
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "agent",
-          text: data.reply,
-        },
-      ]);
+      setMessages((prev) => [...prev, { role: "agent", text: data.reply }]);
     } catch (error) {
       setMessages((prev) => [
         ...prev,
-        {
-          role: "agent",
-          text: "Sorry, I could not reach the server. Is the backend running?",
-        },
+        { role: "agent", text: "Sorry, I could not reach the server." },
       ]);
     } finally {
       setLoading(false);
@@ -117,173 +118,78 @@ export default function CreateAgent() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-black text-white px-4">
-      {step !== "chat" && (
-        <h1 className="text-4xl font-bold mb-3">Create Your First Agent</h1>
-      )}
-
-      {step === "name-agent" && (
-        <>
-          <p className="text-gray-400 mb-10 text-center">
-            First, give your AI agent a name.
-          </p>
-          <div className="flex flex-col items-center gap-4 w-full max-w-md">
-            <input
-              type="text"
-              placeholder="Agent name (e.g. Aether, Nova, Atlas...)"
-              value={agentName}
-              onChange={(e) => setAgentName(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-green-500"
-            />
-            <button
-              onClick={handleAgentName}
-              className="w-full px-6 py-3 bg-green-600 hover:bg-green-500 text-black font-medium rounded-lg transition-colors"
-            >
-              Continue
-            </button>
+    <main className="flex h-screen flex-col bg-black text-white overflow-hidden">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-6 py-3 border-b border-green-500/20 bg-zinc-950/80 backdrop-blur">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-green-500/20 border border-green-400/50 flex items-center justify-center">
+            <div className="w-2 h-2 rounded-full bg-green-400"></div>
           </div>
-        </>
-      )}
-
-      {step === "name-user" && (
-        <>
-          <p className="text-green-400 text-xl mb-2">
-            Agent “{agentName}” is ready.
-          </p>
-          <p className="text-gray-400 mb-10 text-center">
-            What is your name?
-          </p>
-          <div className="flex flex-col items-center gap-4 w-full max-w-md">
-            <input
-              type="text"
-              placeholder="Your name"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-green-500"
-            />
-            <button
-              onClick={handleUserName}
-              className="w-full px-6 py-3 bg-green-600 hover:bg-green-500 text-black font-medium rounded-lg transition-colors"
-            >
-              Continue
-            </button>
-          </div>
-        </>
-      )}
-
-      {step === "chat" && (
-        <div className="w-full max-w-lg flex flex-col h-[80vh]">
-          {/* Hologram + Neuron network processing */}
-          <div className="flex flex-col items-center mb-4">
-            <div className="relative w-32 h-32 flex items-center justify-center">
-              
-              {/* Buitenste orb */}
-              <div
-                className={`absolute w-24 h-24 rounded-full border flex items-center justify-center gap-4 transition-all duration-300 z-10 ${
-                  loading
-                    ? "bg-green-500/20 border-green-300 scale-105"
-                    : "bg-green-500/20 border-green-400/40 animate-pulse"
-                }`}
-              >
-                {/* Ogen */}
-                <div className="w-3 h-3 rounded-full bg-green-400 shadow-[0_0_8px_#4ade80]"></div>
-                <div className="w-3 h-3 rounded-full bg-green-400 shadow-[0_0_8px_#4ade80]"></div>
-              </div>
-
-              {/* Neuron network (alleen zichtbaar tijdens thinking) */}
-              {loading && (
-                <>
-                  {/* Verbindingslijnen */}
-                  <div className="absolute w-full h-full">
-                    <div className="absolute top-4 left-6 w-8 h-px bg-green-400/40 rotate-45 origin-left"></div>
-                    <div className="absolute top-4 right-6 w-8 h-px bg-green-400/40 -rotate-45 origin-right"></div>
-                    <div className="absolute bottom-6 left-8 w-10 h-px bg-green-400/30 rotate-12"></div>
-                    <div className="absolute bottom-6 right-8 w-10 h-px bg-green-400/30 -rotate-12"></div>
-                    <div className="absolute top-1/2 left-2 w-6 h-px bg-green-400/50"></div>
-                    <div className="absolute top-1/2 right-2 w-6 h-px bg-green-400/50"></div>
-                  </div>
-
-                  {/* Neuronen (pulserende bolletjes) */}
-                  <div className="absolute top-2 left-8 w-2 h-2 rounded-full bg-green-300 animate-ping"></div>
-                  <div className="absolute top-2 right-8 w-2 h-2 rounded-full bg-green-300 animate-ping" style={{ animationDelay: "0.2s" }}></div>
-                  <div className="absolute bottom-4 left-6 w-2.5 h-2.5 rounded-full bg-green-400 animate-ping" style={{ animationDelay: "0.4s" }}></div>
-                  <div className="absolute bottom-4 right-6 w-2.5 h-2.5 rounded-full bg-green-400 animate-ping" style={{ animationDelay: "0.6s" }}></div>
-                  <div className="absolute top-1/2 left-1 w-2 h-2 rounded-full bg-green-200 animate-ping" style={{ animationDelay: "0.3s" }}></div>
-                  <div className="absolute top-1/2 right-1 w-2 h-2 rounded-full bg-green-200 animate-ping" style={{ animationDelay: "0.5s" }}></div>
-                </>
-              )}
-
-              <div className="absolute inset-0 rounded-full bg-green-400/10 blur-xl"></div>
-            </div>
-
-            {loading && (
-              <p className="mt-2 text-xs text-green-400/80 animate-pulse">
-                Neural processing...
-              </p>
-            )}
-          </div>
-
-          <div className="flex justify-between items-center mb-4 px-2">
-            <div>
-              <p className="text-green-400 text-sm">{agentName} is online</p>
-              <p className="text-xs text-gray-500">Level {level}</p>
-            </div>
-            <Link
-              href="/control-room"
-              className="text-sm text-gray-400 hover:text-green-400 transition-colors"
-            >
-              Control Room →
-            </Link>
-          </div>
-
-          {level >= 1 && (
-            <div className="mb-3 text-center text-xs text-green-500/80">
-              Level 1 unlocked
-            </div>
-          )}
-
-          <div className="flex-1 overflow-y-auto space-y-4 mb-4 px-2">
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  msg.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                <div
-                  className={`max-w-[80%] px-4 py-3 rounded-xl text-sm ${
-                    msg.role === "user"
-                      ? "bg-green-600 text-black"
-                      : "bg-zinc-900 border border-green-500/30 text-green-400"
-                  }`}
-                >
-                  {msg.text}
-                </div>
-              </div>
-            ))}
-            <div ref={bottomRef} />
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Type a message..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              disabled={loading}
-              className="flex-1 px-4 py-3 rounded-lg bg-zinc-900 border border-zinc-700 text-white focus:outline-none focus:border-green-500 disabled:opacity-50"
-            />
-            <button
-              onClick={handleSend}
-              disabled={loading}
-              className="px-5 py-3 bg-green-600 hover:bg-green-500 text-black font-medium rounded-lg transition-colors disabled:opacity-50"
-            >
-              {loading ? "..." : "Send"}
-            </button>
+          <div>
+            <p className="text-sm font-medium text-green-400">
+              {agentName || "Companion"} · Online
+            </p>
+            <p className="text-xs text-gray-500">Level {level} · Companion</p>
           </div>
         </div>
-      )}
+        <Link
+          href="/control-room"
+          className="text-sm text-gray-400 hover:text-green-400 transition-colors"
+        >
+          Control Room →
+        </Link>
+      </div>
+
+      {/* Chat area */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+        {messages.map((msg, index) => (
+          <div
+            key={index}
+            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+          >
+            <div
+              className={`max-w-[75%] px-4 py-3 rounded-xl text-sm leading-relaxed whitespace-pre-wrap ${
+                msg.role === "user"
+                  ? "bg-green-600 text-black"
+                  : "bg-zinc-900 border border-green-500/20 text-green-300"
+              }`}
+            >
+              {msg.text}
+            </div>
+          </div>
+        ))}
+
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-zinc-900 border border-green-500/20 text-green-400/70 px-4 py-3 rounded-xl text-sm">
+              Neural processing...
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input area - vast onderaan */}
+      <div className="border-t border-green-500/20 bg-zinc-950/90 px-4 py-4">
+        <div className="max-w-3xl mx-auto flex gap-3">
+          <input
+            type="text"
+            placeholder="Message your Companion..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            disabled={loading}
+            className="flex-1 px-4 py-3 rounded-lg bg-zinc-900 border border-green-500/30 text-white placeholder-gray-500 focus:outline-none focus:border-green-400 disabled:opacity-50"
+          />
+          <button
+            onClick={handleSend}
+            disabled={loading}
+            className="px-6 py-3 bg-green-600 hover:bg-green-500 text-black font-medium rounded-lg transition-colors disabled:opacity-50"
+          >
+            {loading ? "..." : "Send"}
+          </button>
+        </div>
+      </div>
     </main>
   );
 }
