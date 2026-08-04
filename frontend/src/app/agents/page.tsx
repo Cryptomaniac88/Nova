@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Bot, Trash2, MessageSquare } from "lucide-react";
+import { Plus, Bot, Trash2, MessageSquare, Pencil } from "lucide-react";
 
 interface Agent {
   id: string;
@@ -14,9 +14,12 @@ interface Agent {
 export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   const [name, setName] = useState("");
   const [role, setRole] = useState("");
   const [instruction, setInstruction] = useState("");
+
   const router = useRouter();
 
   useEffect(() => {
@@ -27,6 +30,14 @@ export default function AgentsPage() {
   const saveAgents = (list: Agent[]) => {
     setAgents(list);
     localStorage.setItem("nova_agents", JSON.stringify(list));
+  };
+
+  const resetForm = () => {
+    setName("");
+    setRole("");
+    setInstruction("");
+    setIsCreating(false);
+    setEditingId(null);
   };
 
   const handleCreate = () => {
@@ -40,14 +51,38 @@ export default function AgentsPage() {
     };
 
     saveAgents([...agents, newAgent]);
-    setName("");
-    setRole("");
-    setInstruction("");
+    resetForm();
+  };
+
+  const startEdit = (agent: Agent) => {
+    setEditingId(agent.id);
     setIsCreating(false);
+    setName(agent.name);
+    setRole(agent.role);
+    setInstruction(agent.instruction);
+  };
+
+  const handleUpdate = () => {
+    if (!editingId || !name.trim() || !role.trim()) return;
+
+    const updated = agents.map((a) =>
+      a.id === editingId
+        ? {
+            ...a,
+            name: name.trim(),
+            role: role.trim(),
+            instruction: instruction.trim() || "You are a helpful agent.",
+          }
+        : a
+    );
+
+    saveAgents(updated);
+    resetForm();
   };
 
   const handleDelete = (id: string) => {
     saveAgents(agents.filter((a) => a.id !== id));
+    if (editingId === id) resetForm();
   };
 
   return (
@@ -58,7 +93,10 @@ export default function AgentsPage() {
           <p className="text-zinc-400">Create and manage your AI agents.</p>
         </div>
         <button
-          onClick={() => setIsCreating(!isCreating)}
+          onClick={() => {
+            resetForm();
+            setIsCreating(true);
+          }}
           className="bg-green-600 hover:bg-green-500 text-black px-4 py-2 rounded-lg flex items-center gap-2 font-medium"
         >
           <Plus size={18} />
@@ -66,9 +104,11 @@ export default function AgentsPage() {
         </button>
       </header>
 
-      {isCreating && (
+      {(isCreating || editingId) && (
         <div className="mb-8 bg-zinc-900 border border-green-500/20 p-6 rounded-xl">
-          <h2 className="text-xl font-bold text-white mb-4">Create Agent</h2>
+          <h2 className="text-xl font-bold text-white mb-4">
+            {editingId ? "Edit Agent" : "Create Agent"}
+          </h2>
           <div className="space-y-4">
             <input
               type="text"
@@ -88,18 +128,18 @@ export default function AgentsPage() {
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
               placeholder="Instructions"
-              rows={3}
+              rows={4}
               className="w-full px-4 py-2.5 rounded-lg bg-zinc-950 border border-green-500/30 text-white focus:outline-none focus:border-green-400 resize-none"
             />
             <div className="flex justify-end gap-3">
-              <button onClick={() => setIsCreating(false)} className="px-4 py-2 text-zinc-400">
+              <button onClick={resetForm} className="px-4 py-2 text-zinc-400">
                 Cancel
               </button>
               <button
-                onClick={handleCreate}
+                onClick={editingId ? handleUpdate : handleCreate}
                 className="bg-green-600 hover:bg-green-500 text-black px-6 py-2 rounded-lg font-medium"
               >
-                Create Agent
+                {editingId ? "Save Changes" : "Create Agent"}
               </button>
             </div>
           </div>
@@ -122,16 +162,30 @@ export default function AgentsPage() {
                   <p className="text-sm text-green-400">{agent.role}</p>
                 </div>
               </div>
-              <button
-                onClick={() => handleDelete(agent.id)}
-                className="text-zinc-600 hover:text-red-400"
-              >
-                <Trash2 size={16} />
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => startEdit(agent)}
+                  className="text-zinc-600 hover:text-green-400"
+                  title="Edit"
+                >
+                  <Pencil size={16} />
+                </button>
+                <button
+                  onClick={() => handleDelete(agent.id)}
+                  className="text-zinc-600 hover:text-red-400"
+                  title="Delete"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
 
-            <p className="text-sm text-zinc-400 mb-4 line-clamp-3">{agent.instruction}</p>
-            <p className="text-xs text-zinc-600 mb-4">ID: {agent.id.slice(0, 8)}...</p>
+            <p className="text-sm text-zinc-400 mb-4 line-clamp-3">
+              {agent.instruction}
+            </p>
+            <p className="text-xs text-zinc-600 mb-4">
+              ID: {agent.id.slice(0, 8)}...
+            </p>
 
             <button
               onClick={() => router.push(`/agents/${agent.id}`)}

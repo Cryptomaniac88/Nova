@@ -26,21 +26,36 @@ export default function AgentChatPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const loadedRef = useRef(false);
+
   const addXp = (amount = 10) => {
     const currentXp = Number(localStorage.getItem("nova_xp") || "0");
     const newXp = currentXp + amount;
     const newLevel = Math.floor(newXp / 100) + 1;
-
     localStorage.setItem("nova_xp", String(newXp));
     localStorage.setItem("nova_level", String(newLevel));
   };
+
+  // Load agent + chat once
   useEffect(() => {
+    if (!agentId || loadedRef.current) return;
+
     const saved = localStorage.getItem("nova_agents");
-    if (saved) {
-      const list: Agent[] = JSON.parse(saved);
-      const found = list.find((a) => a.id === agentId);
-      if (found) {
-        setAgent(found);
+    if (!saved) return;
+
+    const list: Agent[] = JSON.parse(saved);
+    const found = list.find((a) => a.id === agentId);
+    if (!found) return;
+
+    setAgent(found);
+
+    const chatKey = `nova_agent_chat_${agentId}`;
+    const savedChat = localStorage.getItem(chatKey);
+
+    if (savedChat) {
+      try {
+        setMessages(JSON.parse(savedChat));
+      } catch {
         setMessages([
           {
             role: "agent",
@@ -48,7 +63,16 @@ export default function AgentChatPage() {
           },
         ]);
       }
+    } else {
+      setMessages([
+        {
+          role: "agent",
+          text: `Hello, I am ${found.name} (${found.role}). How can I help you?`,
+        },
+      ]);
     }
+
+    loadedRef.current = true;
   }, [agentId]);
 
   useEffect(() => {
@@ -59,9 +83,20 @@ export default function AgentChatPage() {
     if (!input.trim() || loading || !agent) return;
 
     const userMessage = input.trim();
-    setMessages((prev) => [...prev, { role: "user", text: userMessage }]);
+    const withUser: Message[] = [
+      ...messages,
+      { role: "user", text: userMessage },
+    ];
+
+    setMessages(withUser);
     setInput("");
     setLoading(true);
+
+    // Save immediately after user message
+    localStorage.setItem(
+      `nova_agent_chat_${agentId}`,
+      JSON.stringify(withUser)
+    );
 
     try {
       const res = await fetch("http://localhost:8000/agent/chat", {
@@ -76,13 +111,42 @@ export default function AgentChatPage() {
       });
 
       const data = await res.json();
-      setMessages((prev) => [...prev, { role: "agent", text: data.reply }]);
-      addXp(10); // Add 10 XP for each successful interaction
+      const withAgent: Message[] = [
+        ...withUser,
+        { role: "agent", text: data.reply || "No reply." },
+      ];
+
+      setMessages(withAgent);
+      localStorage.setItem(
+        `nova_agent_chat_${agentId}`,
+        JSON.stringify(withAgent)
+      );
+      addXp(10);
+
+      const clearHistory = () => {
+        if (!agent) return;
+        const welcome: Message[] = [
+          {
+            role: "agent",
+            text: `Hello, I am ${agent.name} (${agent.role}). How can I help you?`,
+          },
+        ];
+        setMessages(welcome);
+        localStorage.setItem(
+          `nova_agent_chat_${agentId}`,
+          JSON.stringify(welcome)
+        );
+      };
     } catch {
-      setMessages((prev) => [
-        ...prev,
+      const withError: Message[] = [
+        ...withUser,
         { role: "agent", text: "Sorry, I could not reach the server." },
-      ]);
+      ];
+      setMessages(withError);
+      localStorage.setItem(
+        `nova_agent_chat_${agentId}`,
+        JSON.stringify(withError)
+      );
     } finally {
       setLoading(false);
     }
@@ -99,6 +163,10 @@ export default function AgentChatPage() {
     );
   }
 
+  function clearHistory(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
+    throw new Error("Function not implemented.");
+  }
+
   return (
     <div className="flex flex-col h-screen bg-black">
       <div className="px-6 py-4 border-b border-green-500/20 flex items-center gap-4">
@@ -108,6 +176,7 @@ export default function AgentChatPage() {
         >
           <ArrowLeft size={20} />
         </button>
+
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center">
             <Bot className="text-green-400" size={18} />
@@ -117,6 +186,13 @@ export default function AgentChatPage() {
             <p className="text-xs text-zinc-500">{agent.role}</p>
           </div>
         </div>
+
+        <button
+          onClick={clearHistory}
+          className="ml-auto text-xs text-zinc-500 hover:text-red-400 border border-zinc-700 hover:border-red-400/50 px-3 py-1.5 rounded-lg"
+        >
+          Clear history
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -127,8 +203,8 @@ export default function AgentChatPage() {
           >
             <div
               className={`max-w-[75%] px-4 py-3 rounded-xl text-sm whitespace-pre-wrap ${msg.role === "user"
-                  ? "bg-green-600 text-black"
-                  : "bg-zinc-900 border border-green-500/20 text-green-300"
+                ? "bg-green-600 text-black"
+                : "bg-zinc-900 border border-green-500/20 text-green-300"
                 }`}
             >
               {msg.text}
