@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Sidebar from "./components/Sidebar";
+import CompanionWidget from "./components/CompanionWidget";
 
 export const metadata: Metadata = {
   title: "Nova",
@@ -17,8 +18,9 @@ export default function RootLayout({
       <body className="bg-black text-white">
         <div className="flex h-screen overflow-hidden">
           <Sidebar />
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 overflow-auto relative">
             {children}
+            <CompanionWidget />
           </main>
         </div>
       </body>
