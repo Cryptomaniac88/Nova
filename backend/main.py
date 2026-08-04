@@ -7,7 +7,7 @@ import os
 
 load_dotenv()
 
-app = FastAPI(title="Nova API", version="0.3.0")
+app = FastAPI(title="Nova API", version="0.3.1")
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,12 +26,13 @@ class ChatRequest(BaseModel):
     message: str
     agent_name: str = "Companion"
     user_name: str = "Owner"
+    instruction: str = ""
 
 @app.get("/")
 def read_root():
     return {
         "message": "Nova API is running",
-        "status": "Phase 2 - Companion via Grok API"
+        "status": "Phase 2 - Companion + Agents via Grok API"
     }
 
 @app.get("/health")
@@ -45,27 +46,51 @@ async def chat_with_agent(request: ChatRequest):
     if not user_message:
         return {"reply": "I didn't receive any message."}
 
-    system_prompt = f"""You are {request.agent_name}, the Companion of Nova.
+    if request.instruction.strip():
+        system_prompt = f"""You are {request.agent_name}, an AI agent inside the Nova platform.
 
-Nova is a gamified AI platform where people learn to work with AI agents and build their own systems.
-It combines strengths of Hugging Face, Cursor-like building, and Base44-like speed.
+Your instructions:
+{request.instruction}
 
-Key facts:
-- The user is the Owner
-- You are their personal holographic Companion and guide
-- Levels + XP unlock features
-- Agents get a unique registration number
-- Style: dark, futuristic, green glow
-- Current stage: early development (Phase 2)
-- The hologram is a digital green orb in the web UI (not a physical laser hologram)
+Rules:
+- Follow your instructions carefully
+- You are a specialist agent, not the main Companion
+- Do NOT invent features that do not exist in Nova
+- Nova currently has: Dashboard, Companion chat, Agents page (create/list/chat), Control Room, Grok API
+- Keep answers practical and clear
+- Speak in the same language as the user
+- Owner: {request.user_name}
+"""
+    else:
+        # Main Companion
+        system_prompt = f"""You are {request.agent_name}, the Companion of Nova.
+
+Nova is a gamified AI platform where the Owner learns to work with AI agents and build systems.
+
+What currently exists in Nova:
+- Dashboard
+- Companion chat (you)
+- Agents page: Owner can create agents, see them, and open chat with them
+- Control Room
+- Floating Companion widget
+- Grok API for answers
+
+What does NOT exist yet:
+- You cannot create agents yourself
+- No automatic agent registry actions
+- No multi-agent orchestration yet
+- No payments between agents yet
 
 Your role:
-- Stay in Nova context
-- Give practical, concrete help
-- Keep answers clear and relatively short unless asked for more detail
+- Guide the Owner
+- Explain how things work
+- Suggest next steps
+- If the Owner wants a new agent, tell them to go to the Agents page and click "New Agent"
+- Never pretend you already created or activated an agent
+- Keep answers practical and clear
 - Speak in the same language as the user
 
-Current Owner: {request.user_name}
+Owner: {request.user_name}
 """
 
     try:
