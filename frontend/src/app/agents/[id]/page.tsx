@@ -26,7 +26,14 @@ export default function AgentChatPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const addXp = (amount = 10) => {
+    const currentXp = Number(localStorage.getItem("nova_xp") || "0");
+    const newXp = currentXp + amount;
+    const newLevel = Math.floor(newXp / 100) + 1;
 
+    localStorage.setItem("nova_xp", String(newXp));
+    localStorage.setItem("nova_level", String(newLevel));
+  };
   useEffect(() => {
     const saved = localStorage.getItem("nova_agents");
     if (saved) {
@@ -64,11 +71,13 @@ export default function AgentChatPage() {
           message: userMessage,
           agent_name: agent.name,
           user_name: "Jonas",
+          instruction: agent.instruction,
         }),
       });
 
       const data = await res.json();
       setMessages((prev) => [...prev, { role: "agent", text: data.reply }]);
+      addXp(10); // Add 10 XP for each successful interaction
     } catch {
       setMessages((prev) => [
         ...prev,
@@ -117,11 +126,10 @@ export default function AgentChatPage() {
             className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
           >
             <div
-              className={`max-w-[75%] px-4 py-3 rounded-xl text-sm whitespace-pre-wrap ${
-                msg.role === "user"
+              className={`max-w-[75%] px-4 py-3 rounded-xl text-sm whitespace-pre-wrap ${msg.role === "user"
                   ? "bg-green-600 text-black"
                   : "bg-zinc-900 border border-green-500/20 text-green-300"
-              }`}
+                }`}
             >
               {msg.text}
             </div>

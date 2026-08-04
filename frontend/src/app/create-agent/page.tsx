@@ -12,7 +12,14 @@ export default function CreateAgent() {
   const [loading, setLoading] = useState(false);
   const [level, setLevel] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const addXp = (amount = 10) => {
+    const currentXp = Number(localStorage.getItem("nova_xp") || "0");
+    const newXp = currentXp + amount;
+    const newLevel = Math.floor(newXp / 100) + 1;
 
+    localStorage.setItem("nova_xp", String(newXp));
+    localStorage.setItem("nova_level", String(newLevel));
+  };
   useEffect(() => {
     const savedAgent = localStorage.getItem("nova_first_agent");
     const savedUser = localStorage.getItem("nova_user_name");
@@ -107,6 +114,7 @@ export default function CreateAgent() {
 
       const data = await res.json();
       setMessages((prev) => [...prev, { role: "agent", text: data.reply }]);
+      addXp(10); // Add 10 XP for each successful interaction
     } catch (error) {
       setMessages((prev) => [
         ...prev,
