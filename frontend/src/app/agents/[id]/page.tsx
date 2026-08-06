@@ -36,7 +36,21 @@ export default function AgentChatPage() {
     localStorage.setItem("nova_level", String(newLevel));
   };
 
-  // Load agent + chat once
+  const clearHistory = () => {
+    if (!agent) return;
+    const welcome: Message[] = [
+      {
+        role: "agent",
+        text: `Hello, I am ${agent.name} (${agent.role}). How can I help you?`,
+      },
+    ];
+    setMessages(welcome);
+    localStorage.setItem(
+      `nova_agent_chat_${agentId}`,
+      JSON.stringify(welcome)
+    );
+  };
+
   useEffect(() => {
     if (!agentId || loadedRef.current) return;
 
@@ -92,7 +106,6 @@ export default function AgentChatPage() {
     setInput("");
     setLoading(true);
 
-    // Save immediately after user message
     localStorage.setItem(
       `nova_agent_chat_${agentId}`,
       JSON.stringify(withUser)
@@ -122,21 +135,6 @@ export default function AgentChatPage() {
         JSON.stringify(withAgent)
       );
       addXp(10);
-
-      const clearHistory = () => {
-        if (!agent) return;
-        const welcome: Message[] = [
-          {
-            role: "agent",
-            text: `Hello, I am ${agent.name} (${agent.role}). How can I help you?`,
-          },
-        ];
-        setMessages(welcome);
-        localStorage.setItem(
-          `nova_agent_chat_${agentId}`,
-          JSON.stringify(welcome)
-        );
-      };
     } catch {
       const withError: Message[] = [
         ...withUser,
@@ -156,15 +154,14 @@ export default function AgentChatPage() {
     return (
       <div className="p-8 text-zinc-400">
         Agent not found.{" "}
-        <button onClick={() => router.push("/agents")} className="text-green-400">
+        <button
+          onClick={() => router.push("/agents")}
+          className="text-green-400"
+        >
           Back
         </button>
       </div>
     );
-  }
-
-  function clearHistory(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
-    throw new Error("Function not implemented.");
   }
 
   return (
@@ -199,13 +196,16 @@ export default function AgentChatPage() {
         {messages.map((msg, i) => (
           <div
             key={i}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+            className={`flex ${
+              msg.role === "user" ? "justify-end" : "justify-start"
+            }`}
           >
             <div
-              className={`max-w-[75%] px-4 py-3 rounded-xl text-sm whitespace-pre-wrap ${msg.role === "user"
-                ? "bg-green-600 text-black"
-                : "bg-zinc-900 border border-green-500/20 text-green-300"
-                }`}
+              className={`max-w-[75%] px-4 py-3 rounded-xl text-sm whitespace-pre-wrap ${
+                msg.role === "user"
+                  ? "bg-green-600 text-black"
+                  : "bg-zinc-900 border border-green-500/20 text-green-300"
+              }`}
             >
               {msg.text}
             </div>

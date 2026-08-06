@@ -1,5 +1,6 @@
 "use client";
 
+import { BookOpen } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Bot, MessageSquare, Settings, Layers } from "lucide-react";
@@ -11,6 +12,7 @@ export default function Sidebar() {
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/create-agent", label: "Companion", icon: MessageSquare },
     { href: "/agents", label: "Agents", icon: Bot },
+    { href: "/learn", label: "Learn", icon: BookOpen },
     { href: "/control-room", label: "Control Room", icon: Settings },
   ];
 
